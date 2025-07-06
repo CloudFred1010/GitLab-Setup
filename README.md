@@ -2,9 +2,9 @@
 
 ## Overview
 
-This repository documents the architecture and implementation of a modular GitLab Proof of Concept (PoC) intended to validate design decisions, networking, security, and deployment strategies before enterprise-wide rollout.
+This repository documents the architecture and implementation of a modularintended to validate design decisions, networking, security, and deployment strategies before enterprise-wide rollout.
 
-The PoC demonstrates how GitLab can be deployed in a production-aligned configuration using isolated components, reverse proxy access, and infrastructure-as-code readiness.
+The Doc demostrate how GitLab can be deployed in a production-aligned configuration using isolated components, reverse proxy access, and infrastructure-as-code readiness.
 
 ---
 ![image](https://github.com/user-attachments/assets/e5b90a11-6738-4ad5-9451-0befb1bf1f85)
