@@ -1,105 +1,97 @@
-# GitLab Proof of Concept (PoC) – Production-Grade Deployment
+# GitLab Modular Architecture – Proof of Concept (PoC)
 
-## Executive Summary
+## Overview
 
-This document outlines the successful implementation of a modular, production-grade GitLab Proof of Concept (PoC). The primary objective was to validate the architecture, network design, security model, and component integration before scaling to the full enterprise GitLab rollout. The PoC demonstrates that the platform is operationally ready, secure, and adheres to best practices for high availability and modular separation of concerns.
+This repository documents the architecture and implementation of a modular GitLab Proof of Concept (PoC) intended to validate design decisions, networking, security, and deployment strategies before enterprise-wide rollout.
 
----
-![image](https://github.com/user-attachments/assets/a5555183-d267-44f9-b3ce-d8a0fb640231)
-
-
-
-
-
-## Project Objectives
-
-- Deploy GitLab Core in a dedicated environment accessible via reverse proxy.
-- Isolate GitLab Runner infrastructure to ensure secure CI/CD execution.
-- Secure GitLab with HTTPS via NGINX, preparing for TLS certificates from a public CA.
-- Validate public/private routing, port exposure, and DNS-based access models.
-- Lay the foundation for a scalable and production-hardened GitLab deployment.
+The PoC demonstrates how GitLab can be deployed in a production-aligned configuration using isolated components, reverse proxy access, and infrastructure-as-code readiness.
 
 ---
+![image](https://github.com/user-attachments/assets/e5b90a11-6738-4ad5-9451-0befb1bf1f85)
 
-## Architecture Design
 
-The GitLab system was deployed using a three-tier modular architecture to mirror an enterprise-ready topology. Each component was provisioned on its own virtual machine to ensure isolation, security, and scalability:
+
+## Objectives
+
+- Deploy GitLab Core in a controlled, private environment.
+- Isolate GitLab Runner on a separate node to decouple job execution from the GitLab application layer.
+- Secure external access via NGINX acting as a reverse proxy.
+- Prepare for TLS certificate integration using a public Certificate Authority (CA).
+- Validate the entire deployment pipeline for future scale-out.
+
+---
+
+## Architecture
+
+The architecture follows a clean separation-of-concerns design:
+
+### 1. GitLab Core (Private Node)
+
+- Installed using the official GitLab Omnibus package.
+- Runs on a dedicated host with restricted access.
+- Exposes the GitLab UI and API locally on a non-standard port.
+- Only accessible externally via the proxy.
+
+### 2. GitLab Runner (Worker Node)
+
+- Configured as a separate compute instance.
+- Prepares for secure CI/CD workloads in Docker or shell executor modes.
+- Will be registered with GitLab Core in the next deployment phase.
+
+### 3. NGINX Reverse Proxy (Public Node)
+
+- Hosts public entry points for HTTP/HTTPS.
+- Forwards requests to the GitLab Core over internal networking.
+- Configured with SSL placeholders in preparation for Let’s Encrypt integration.
+- Protects backend infrastructure by exposing only controlled endpoints.
+
+---
+
+## Implementation Details
 
 ### GitLab Core
 
-- Hosted on a dedicated Ubuntu EC2 instance.
-- Installed using the official GitLab Omnibus package.
-- Exposed locally on port `8181`.
-- External access is routed through the NGINX reverse proxy.
-- Key endpoint validated: `http://18.168.148.18:8181`.
+- Installed via package manager with required dependencies.
+- Verified application health using CLI tools, internal curl checks, and systemd.
+- Configured `external_url` pointing to the reverse proxy address.
 
-### GitLab Runner
+### NGINX Proxy
 
-- Hosted on a separate Amazon Linux instance.
-- Designed to handle CI/CD jobs in a controlled and secure manner.
-- Docker support is enabled to allow containerized builds.
-- Connectivity and registration with GitLab Core are deferred to the production phase.
-
-### NGINX Reverse Proxy
-
-- Deployed on Amazon Linux 2023.
-- Acts as the public-facing entry point for GitLab.
-- Routes all traffic from port `80/443` to the internal GitLab Core on port `8181`.
-- SSL placeholders configured for public CA integration (Let's Encrypt via Certbot).
-- Validated HTTP access via `curl`, browser, and internal loopback.
+- Config includes both HTTP (port 80) and HTTPS (port 443) blocks.
+- Default HTTPS paths reference placeholder certificate files:
+  - `/etc/nginx/ssl/gitlab.crt`
+  - `/etc/nginx/ssl/gitlab.key`
+- Verified NGINX health using `nginx -t`, `systemctl`, and live curl tests.
 
 ---
 
-## Implementation Summary
+## TLS Integration Plan
 
-### GitLab Core Setup
+To secure GitLab with HTTPS, the next stage is to issue a TLS certificate from Let’s Encrypt:
 
-- Installed via package manager (`curl` and `.deb` source).
-- Configured `external_url` to match internal access address.
-- Verified service via `curl`, systemd, and browser redirect tests.
-
-### NGINX Proxy Configuration
-
-- Created custom `gitlab.conf` in `/etc/nginx/conf.d/` with both HTTP and HTTPS server blocks.
-- Verified NGINX configuration using `nginx -t` and `systemctl status`.
-- Routes requests to the GitLab backend while preserving key headers (`Host`, `X-Forwarded-*`).
-- Prepped SSL paths for `gitlab.crt` and `gitlab.key`.
-
-### DNS and IP Configuration
-
-- Verified all public/private IPs.
-- Ensured connectivity between instances using `curl`, `ss`, and port checks.
-- Prepared DNS routing plan for future domains like `gitlab.greenlnk.net`.
+1. Install `certbot` on the NGINX proxy server.
+2. Point DNS (e.g., `gitlab.example.com`) to the public proxy IP.
+3. Generate certificates using Certbot (webroot or standalone).
+4. Update NGINX SSL paths to reference Certbot-generated keys.
+5. Reload NGINX and verify HTTPS access.
 
 ---
 
-## TLS Integration Plan (Next Step)
+## Verification Performed
 
-To finalize the production readiness, we will acquire a publicly trusted TLS certificate using Let’s Encrypt and integrate it with the NGINX proxy. The steps are:
-
-1. Install `certbot` on the NGINX server.
-2. Obtain a certificate for a real domain name (e.g., `gitlab.greenlnk.net`).
-3. Replace existing SSL placeholder paths with Certbot-managed certificates.
-4. Reload NGINX and test HTTPS access.
-
----
-
-## Validation & Testing
-
-- Verified NGINX proxy routing and GitLab UI response.
-- Conducted TCP and HTTP checks across all relevant ports.
-- Reviewed log output from systemd services and browser network tools.
-- Confirmed public-facing access is functional and secure for the PoC stage.
+- End-to-end routing from browser to GitLab UI confirmed.
+- Port bindings (`ss -tuln`) validated across all nodes.
+- NGINX reverse proxy tested using both `curl` and browser clients.
+- Internal network connectivity tested between GitLab Core and the proxy.
 
 ---
 
 ## Conclusion
 
-This PoC confirms that the modular GitLab architecture is:
+This PoC validates that the proposed modular GitLab deployment strategy is:
 
-- Correctly designed and deployed according to enterprise standards.
-- Securely proxied using NGINX with a clear path to HTTPS.
-- Ready for integration with CI/CD pipelines and user authentication.
-- Scalable for production deployment following Certbot TLS setup and GitLab Runner integration.
+- Secure by default with strict public/private boundary controls.
+- Operationally sound with clear role separation between nodes.
+- Ready for further enhancements including TLS, GitLab Runner integration, and CI/CD pipeline onboarding.
 
-This PoC now serves as a validated reference for the main GitLab project rollout planned for the upcoming week.
+The design and deployment approach proven in this PoC will now serve as the foundation for the full-scale production implementation.
