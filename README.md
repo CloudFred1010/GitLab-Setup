@@ -1,4 +1,4 @@
-# GitLab Modular Architecture – Proof of Concept (PoC)
+# GitLab Modular Architecture
 
 ## Overview
 
