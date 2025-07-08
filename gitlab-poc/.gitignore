@@ -1,0 +1,10 @@
+# Ignore binaries and temp files
+aws/
+*.zip
+*.so
+*.tar.gz
+*.sarif
+*.log
+__pycache__/
+sbom.json
+gitleaks-report.sarif
